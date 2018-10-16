@@ -58,7 +58,7 @@ public class SearchGUIUtil {
                 if (retVal.containsValue(kvp.getValue())) {
                     continue;
                 }
-                if (SearchUtil.getDistance(kvp.getValue().getObfuscatedName().toLowerCase(), needle) <= 3 || SearchUtil.getDistance(kvp.getValue().getSRGName().toLowerCase(), needle) <= 3) {
+                if (SearchUtil.getDistance(kvp.getValue().getObfuscatedName().toLowerCase(), needle) <= 2 || SearchUtil.getDistance(kvp.getValue().getSRGName().toLowerCase(), needle) <= 2) {
                     TreeClass trimmed = trim(kvp.getValue(), needle, filterMethods, filterFields, exact, true);
                     if (trimmed != null) {
                         retVal.put(kvp.getKey(), trimmed);
@@ -70,7 +70,7 @@ public class SearchGUIUtil {
                 if (retVal.containsValue(kvp.getValue())) {
                     continue;
                 }
-                if (SearchUtil.getDistanceSubstring(kvp.getValue().getObfuscatedName().toLowerCase(), needle) <= 2 || SearchUtil.getDistanceSubstring(kvp.getValue().getSRGName().toLowerCase(), needle) <= 2) {
+                if (SearchUtil.getDistanceSubstring(kvp.getValue().getObfuscatedName().toLowerCase(), needle) <= 1 || SearchUtil.getDistanceSubstring(kvp.getValue().getSRGName().toLowerCase(), needle) <= 1) {
                     TreeClass trimmed = trim(kvp.getValue(), needle, filterMethods, filterFields, exact, true);
                     if (trimmed != null) {
                         retVal.put(kvp.getKey(), trimmed);
@@ -132,7 +132,7 @@ public class SearchGUIUtil {
                 if (retVal.getFields().contains(field)) {
                     continue;
                 }
-                if (SearchUtil.getDistance(field.getObfuscatedName().toLowerCase(), search) <= 3 || SearchUtil.getDistance(field.getSRGName().toLowerCase(), search) <= 3 || (field.getMappedName() != null && SearchUtil.getDistance(field.getMappedName().toLowerCase(), search) <= 3) || (field.getDescription() != null && SearchUtil.getDistance(field.getDescription().toLowerCase(), search) <= 3)) {
+                if (SearchUtil.getDistance(field.getObfuscatedName().toLowerCase(), search) <= 2 || SearchUtil.getDistance(field.getSRGName().toLowerCase(), search) <= 2 || (field.getMappedName() != null && SearchUtil.getDistance(field.getMappedName().toLowerCase(), search) <= 2) || (field.getDescription() != null && SearchUtil.getDistance(field.getDescription().toLowerCase(), search) <= 2)) {
                     retVal.getFields().add(field);
                 }
             }
@@ -142,7 +142,7 @@ public class SearchGUIUtil {
                     if (retVal.getFields().contains(field)) {
                         continue;
                     }
-                    if (SearchUtil.getDistanceSubstring(field.getObfuscatedName().toLowerCase(), search) <= 2 || SearchUtil.getDistanceSubstring(field.getSRGName().toLowerCase(), search) <= 2 || (field.getMappedName() != null && SearchUtil.getDistanceSubstring(field.getMappedName().toLowerCase(), search) <= 2) || (field.getDescription() != null && SearchUtil.getDistanceSubstring(field.getDescription().toLowerCase(), search) <= 2)) {
+                    if (SearchUtil.getDistanceSubstring(field.getObfuscatedName().toLowerCase(), search) <= 1 || SearchUtil.getDistanceSubstring(field.getSRGName().toLowerCase(), search) <= 1 || (field.getMappedName() != null && SearchUtil.getDistanceSubstring(field.getMappedName().toLowerCase(), search) <= 1) || (field.getDescription() != null && SearchUtil.getDistanceSubstring(field.getDescription().toLowerCase(), search) <= 1)) {
                         retVal.getFields().add(field);
                     }
                 }
@@ -190,11 +190,11 @@ public class SearchGUIUtil {
                 if (retVal.getMethods().contains(method)) {
                     continue;
                 }
-                if (SearchUtil.getDistance(method.getObfuscatedName().toLowerCase(), search) <= 3 || SearchUtil.getDistance(method.getObfuscatedString().toLowerCase(), search) <= 3 || SearchUtil.getDistance(method.getSRGName().toLowerCase(), search) <= 3 || SearchUtil.getDistance(method.getSRGString().toLowerCase(), search) <= 3 || SearchUtil.getDistance(method.getMappedString().toLowerCase(), search) <= 3 || (method.getMappedName() != null && SearchUtil.getDistance(method.getMappedName().toLowerCase(), search) <= 3) || (method.getDescription() != null && SearchUtil.getDistance(method.getDescription().toLowerCase(), search) <= 3)) {
+                if (SearchUtil.getDistance(method.getObfuscatedName().toLowerCase(), search) <= 2 || SearchUtil.getDistance(method.getObfuscatedString().toLowerCase(), search) <= 2 || SearchUtil.getDistance(method.getSRGName().toLowerCase(), search) <= 2 || SearchUtil.getDistance(method.getSRGString().toLowerCase(), search) <= 2 || SearchUtil.getDistance(method.getMappedString().toLowerCase(), search) <= 2 || (method.getMappedName() != null && SearchUtil.getDistance(method.getMappedName().toLowerCase(), search) <= 2) || (method.getDescription() != null && SearchUtil.getDistance(method.getDescription().toLowerCase(), search) <= 2)) {
                     retVal.getMethods().add(method);
                 }
                 for (String input : method.getSRGValues()) {
-                    if (input != null && SearchUtil.getDistance(input.toLowerCase(), search) <= 3) {
+                    if (input != null && SearchUtil.getDistance(input.toLowerCase(), search) <= 2) {
                         retVal.getMethods().add(method);
                         break;
                     }
@@ -206,11 +206,11 @@ public class SearchGUIUtil {
                     if (retVal.getMethods().contains(method)) {
                         continue;
                     }
-                    if (SearchUtil.getDistanceSubstring(method.getObfuscatedName().toLowerCase(), search) <= 2 || SearchUtil.getDistanceSubstring(method.getObfuscatedString().toLowerCase(), search) <= 2 || SearchUtil.getDistanceSubstring(method.getSRGName().toLowerCase(), search) <= 2 || SearchUtil.getDistanceSubstring(method.getSRGString().toLowerCase(), search) <= 2 || SearchUtil.getDistanceSubstring(method.getMappedString().toLowerCase(), search) <= 2 || (method.getMappedName() != null && SearchUtil.getDistanceSubstring(method.getMappedName().toLowerCase(), search) <= 2) || (method.getDescription() != null && SearchUtil.getDistanceSubstring(method.getDescription().toLowerCase(), search) <= 2)) {
+                    if (SearchUtil.getDistanceSubstring(method.getObfuscatedName().toLowerCase(), search) <= 1 || SearchUtil.getDistanceSubstring(method.getObfuscatedString().toLowerCase(), search) <= 1 || SearchUtil.getDistanceSubstring(method.getSRGName().toLowerCase(), search) <= 1 || SearchUtil.getDistanceSubstring(method.getSRGString().toLowerCase(), search) <= 1 || SearchUtil.getDistanceSubstring(method.getMappedString().toLowerCase(), search) <= 1 || (method.getMappedName() != null && SearchUtil.getDistanceSubstring(method.getMappedName().toLowerCase(), search) <= 1) || (method.getDescription() != null && SearchUtil.getDistanceSubstring(method.getDescription().toLowerCase(), search) <= 1)) {
                         retVal.getMethods().add(method);
                     }
                     for (String input : method.getSRGValues()) {
-                        if (input != null && SearchUtil.getDistanceSubstring(input.toLowerCase(), search) <= 2) {
+                        if (input != null && SearchUtil.getDistanceSubstring(input.toLowerCase(), search) <= 1) {
                             retVal.getMethods().add(method);
                             break;
                         }
