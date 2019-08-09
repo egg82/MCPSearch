@@ -54,7 +54,7 @@ public class Main extends Application {
         if (!initialLoader.isShutdown()) {
             initialLoader.shutdown();
             try {
-                if (!initialLoader.awaitTermination(8L, TimeUnit.SECONDS)) {
+                if (!initialLoader.awaitTermination(1L, TimeUnit.SECONDS)) {
                     initialLoader.shutdownNow();
                 }
             } catch (InterruptedException ignored) {
