@@ -1,9 +1,7 @@
 package ninja.egg82.mcpsearch.data;
 
 import javafx.scene.control.Alert;
-import ninja.egg82.analytics.exceptions.IExceptionHandler;
 import ninja.egg82.mcpsearch.utils.AlertUtil;
-import ninja.egg82.patterns.ServiceLocator;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -14,8 +12,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CSVData {
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
     public Map<String, String[]> methods = new HashMap<>(); // func_100011_g, [getIsPotionDurationMax, "Get the value of the isPotionDurationMax field."]
     public Map<String, String> params = new HashMap<>(); // p_100012_1_, maxDuration
     public Map<String, String[]> fields = new HashMap<>(); // field_100013_f, [isPotionDurationMax, "True if potion effect duration is at maximum, false otherwise."]
@@ -88,7 +90,7 @@ public class CSVData {
                 fields.put(split[0], new String[] { split[1], split.length >= 4 ? split[3] : null });
             }
         } catch (IOException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not parse CSV.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "CSV Parse Error", ex.getMessage());
             return;
         }
@@ -107,7 +109,7 @@ public class CSVData {
                 methods.put(split[0], new String[] { split[1], split.length >= 4 ? split[3] : null });
             }
         } catch (IOException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not parse CSV.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "CSV Parse Error", ex.getMessage());
             return;
         }
@@ -126,7 +128,7 @@ public class CSVData {
                 params.put(split[0], split[1]);
             }
         } catch (IOException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not parse CSV.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "CSV Parse Error", ex.getMessage());
             return;
         }

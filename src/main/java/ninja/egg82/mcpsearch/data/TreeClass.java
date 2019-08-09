@@ -1,6 +1,5 @@
 package ninja.egg82.mcpsearch.data;
 
-import ninja.egg82.mcpsearch.utils.SearchUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.json.simple.JSONArray;

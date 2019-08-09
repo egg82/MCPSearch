@@ -1,9 +1,7 @@
 package ninja.egg82.mcpsearch.data;
 
 import javafx.scene.control.Alert;
-import ninja.egg82.analytics.exceptions.IExceptionHandler;
 import ninja.egg82.mcpsearch.utils.AlertUtil;
-import ninja.egg82.patterns.ServiceLocator;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -14,8 +12,12 @@ import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SRGData {
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
     public Map<String, String> classes = new HashMap<>(); // a, net/minecraft/util/text/TextFormatting
     public Map<String, String> methods = new HashMap<>(); // a/a, func_175744_a
     public Map<String, String[]> params = new HashMap<>(); // func_184104_a, [net/minecraft/command/ICommandSender, java/lang/String, net/minecraft/util/math/BlockPos, boolean]
@@ -135,7 +137,7 @@ public class SRGData {
                 }
             }
         } catch (IOException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not parse SRG.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "SRG Parse Error", ex.getMessage());
             return;
         }
@@ -189,7 +191,7 @@ public class SRGData {
                 }
             }
         } catch (IOException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not parse SRG.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "SRG Parse Error", ex.getMessage());
             return;
         }

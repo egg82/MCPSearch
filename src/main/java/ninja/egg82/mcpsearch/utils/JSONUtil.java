@@ -1,64 +1,43 @@
 package ninja.egg82.mcpsearch.utils;
 
-import ninja.egg82.concurrent.DynamicConcurrentDeque;
-import ninja.egg82.concurrent.IConcurrentDeque;
+import java.io.*;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-
 public class JSONUtil {
-    private static IConcurrentDeque<JSONParser> pool = new DynamicConcurrentDeque<JSONParser>(); // JSONParser is not stateless and thus requires a pool in multi-threaded environments
-
-    static {
-        pool.add(new JSONParser());
-    }
-
     private JSONUtil() {}
 
-    public static JSONObject parseObject(String input) throws ParseException, ClassCastException {
-        JSONParser parser = getParser();
-        JSONObject retVal = (JSONObject) parser.parse(input);
-        pool.add(parser);
-        return retVal;
-    }
-
-    public static JSONArray parseArray(String input) throws ParseException, ClassCastException {
-        JSONParser parser = getParser();
-        JSONArray retVal = (JSONArray) parser.parse(input);
-        pool.add(parser);
-        return retVal;
-    }
-
-    public static void write(JSONObject object, File file) throws IOException {
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(object.toJSONString());
-        }
-    }
-
-    public static void write(JSONArray array, File file) throws IOException {
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(array.toJSONString());
+    public static void write(JSONAware json, File file) throws IOException {
+        try (
+                FileWriter fileOut = new FileWriter(file);
+                BufferedWriter out = new BufferedWriter(fileOut)
+        ) {
+            out.write(json.toJSONString());
         }
     }
 
     public static JSONObject readObject(File file) throws IOException, ParseException, ClassCastException {
-        return (JSONObject) getParser().parse(new FileReader(file));
-    }
-    public static JSONArray readArray(File file) throws IOException, ParseException, ClassCastException {
-        return (JSONArray) getParser().parse(new FileReader(file));
+        return ninja.egg82.json.JSONUtil.parseObject(getStringFromFile(file));
     }
 
-    private static JSONParser getParser() {
-        JSONParser parser = pool.pollFirst();
-        if (parser == null) {
-            parser = new JSONParser();
+    public static JSONArray readArray(File file) throws IOException, ParseException, ClassCastException {
+        return ninja.egg82.json.JSONUtil.parseArray(getStringFromFile(file));
+    }
+
+    private static String getStringFromFile(File file) throws IOException {
+        try (
+                FileReader fileIn = new FileReader(file);
+                BufferedReader in = new BufferedReader(fileIn)
+        ) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                builder.append(line);
+                builder.append(System.lineSeparator());
+            }
+            return builder.toString().trim();
         }
-        return parser;
     }
 }

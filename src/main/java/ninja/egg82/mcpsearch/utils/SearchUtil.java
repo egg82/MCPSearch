@@ -1,6 +1,6 @@
 package ninja.egg82.mcpsearch.utils;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public class SearchUtil {
     public static int getDistance(String haystack, String needle) {

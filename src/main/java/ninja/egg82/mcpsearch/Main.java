@@ -1,24 +1,25 @@
 package ninja.egg82.mcpsearch;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import ninja.egg82.analytics.exceptions.GameAnalyticsExceptionHandler;
-import ninja.egg82.analytics.exceptions.IExceptionHandler;
 import ninja.egg82.mcpsearch.utils.gui.VersionGUIUtil;
-import ninja.egg82.patterns.ServiceLocator;
-import ninja.egg82.utils.ThreadUtil;
 
 import java.io.IOException;
-import java.util.UUID;
 
 public class Main extends Application {
     public static void main(String[] args) {
         launch(args);
     }
+
+    private static ExecutorService initialLoader = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("Init-%d").build());
 
     private Controller controller;
 
@@ -34,9 +35,7 @@ public class Main extends Application {
         controller.setup();
         primaryStage.show();
 
-        ServiceLocator.provideService(new GameAnalyticsExceptionHandler("801d7ccccb2bed9ebd0ca7621e5c355d", "e37be12a9125a9bbf915c119f7d6fae0cd5506ee", "1.0.0", UUID.randomUUID().toString(), "MCPSearch"));
-
-        ThreadUtil.submit(() -> {
+        initialLoader.submit(() -> {
             VersionGUIUtil.getVersions(controller);
 
             Platform.runLater(() -> {
@@ -50,7 +49,18 @@ public class Main extends Application {
 
     @Override
     public void stop() {
-        ServiceLocator.getService(IExceptionHandler.class).close();
-        ThreadUtil.shutdown(5000L);
+        controller.stop();
+
+        if (!initialLoader.isShutdown()) {
+            initialLoader.shutdown();
+            try {
+                if (!initialLoader.awaitTermination(8L, TimeUnit.SECONDS)) {
+                    initialLoader.shutdownNow();
+                }
+            } catch (InterruptedException ignored) {
+                initialLoader.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }

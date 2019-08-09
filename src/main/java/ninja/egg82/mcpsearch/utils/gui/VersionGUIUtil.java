@@ -2,11 +2,10 @@ package ninja.egg82.mcpsearch.utils.gui;
 
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
-import ninja.egg82.analytics.exceptions.IExceptionHandler;
+import ninja.egg82.json.JSONWebUtil;
 import ninja.egg82.mcpsearch.Controller;
 import ninja.egg82.mcpsearch.utils.AlertUtil;
-import ninja.egg82.mcpsearch.utils.WebUtil;
-import ninja.egg82.patterns.ServiceLocator;
+import ninja.egg82.mcpsearch.utils.HTTPUtil;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
@@ -14,20 +13,24 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VersionGUIUtil {
+    private static Logger logger = LoggerFactory.getLogger(VersionGUIUtil.class);
+
     private VersionGUIUtil() {}
 
     public static void getVersions(Controller controller) {
         JSONObject versions;
         try {
-            versions = WebUtil.getJsonObject("http://export.mcpbot.bspk.rs/versions.json", "egg82/MCPSearch");
+            versions = JSONWebUtil.getJsonObject("http://export.mcpbot.bspk.rs/versions.json", "egg82/MCPSearch");
         } catch (ParseException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not parse JSON.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "JSON Parse Error", ex.getMessage());
             return;
         } catch (IOException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not get version.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "Version Fetch Error", ex.getMessage());
             return;
         }

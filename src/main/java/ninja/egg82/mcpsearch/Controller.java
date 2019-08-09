@@ -1,6 +1,11 @@
 package ninja.egg82.mcpsearch;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jfoenix.controls.*;
+import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
@@ -8,22 +13,15 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyEvent;
-import ninja.egg82.analytics.exceptions.IExceptionHandler;
 import ninja.egg82.mcpsearch.data.CSVData;
 import ninja.egg82.mcpsearch.data.SRGData;
 import ninja.egg82.mcpsearch.data.TreeClass;
 import ninja.egg82.mcpsearch.data.TreeField;
 import ninja.egg82.mcpsearch.data.TreeMethod;
-import ninja.egg82.mcpsearch.utils.AlertUtil;
-import ninja.egg82.mcpsearch.utils.FileUtil;
-import ninja.egg82.mcpsearch.utils.JSONUtil;
-import ninja.egg82.mcpsearch.utils.WebUtil;
-import ninja.egg82.mcpsearch.utils.ZipUtil;
+import ninja.egg82.mcpsearch.utils.*;
 import ninja.egg82.mcpsearch.utils.gui.SearchGUIUtil;
 import ninja.egg82.mcpsearch.utils.gui.TreeTableGUIUtil;
 import ninja.egg82.mcpsearch.utils.gui.VersionGUIUtil;
-import ninja.egg82.patterns.ServiceLocator;
-import ninja.egg82.utils.ThreadUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -34,9 +32,15 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Controller {
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
     private Timer searchTimer = new Timer();
+
+    private ExecutorService workPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setNameFormat("Work-%d").build());
 
     public void setup() {
         versionTypeCombo.managedProperty().bind(versionTypeCombo.visibleProperty());
@@ -105,6 +109,20 @@ public class Controller {
         });
     }
 
+    public void stop() {
+        if (!workPool.isShutdown()) {
+            workPool.shutdown();
+            try {
+                if (!workPool.awaitTermination(8L, TimeUnit.SECONDS)) {
+                    workPool.shutdownNow();
+                }
+            } catch (InterruptedException ignored) {
+                workPool.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     // Version
     @FXML
     public JFXComboBox<String> versionCombo;
@@ -150,7 +168,7 @@ public class Controller {
             try {
                 versionTypeCombo.getItems().add("Snapshot: " + toDateFormat.format(fromDateFormat.parse(revision)));
             } catch (ParseException ex) {
-                ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                logger.error("Could not parse date.", ex);
                 AlertUtil.show(Alert.AlertType.ERROR, "Date Parser Error", ex.getMessage());
                 break;
             }
@@ -185,7 +203,7 @@ public class Controller {
             try {
                 revision = fromDateFormat.format(toDateFormat.parse(revision.substring(10)));
             } catch (ParseException ex) {
-                ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                logger.error("Could not parse date.", ex);
                 AlertUtil.show(Alert.AlertType.ERROR, "Date Parser Error", ex.getMessage());
                 return;
             }
@@ -216,7 +234,7 @@ public class Controller {
             versionDirectory = FileUtil.getVersionDirectory(version);
             revisionDirectory = FileUtil.getRevisionDirectory(version, revision, isStable);
         } catch (URISyntaxException ex) {
-            ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+            logger.error("Could not get file.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "File Error", ex.getMessage());
             return;
         }
@@ -245,18 +263,18 @@ public class Controller {
         }
 
         if (!csvZip.exists() || !srgFile.exists()) {
-            ThreadUtil.submit(() -> {
+            workPool.submit(() -> {
                 try {
                     if (!csvZip.exists()) {
                         Platform.runLater(() -> versionLabel.setText("Downloading CSV data"));
-                        WebUtil.downloadFile(csvUrl, "egg82/MCPSearch", csvZip);
+                        HTTPUtil.downloadFile(new URL(csvUrl), csvZip);
                     }
                     if (!srgFile.exists()) {
                         Platform.runLater(() -> versionLabel.setText("Downloading SRG data"));
-                        WebUtil.downloadFile(srgUrl, "egg82/MCPSearch", srgFile);
+                        HTTPUtil.downloadFile(new URL(srgUrl), srgFile);
                     }
                 } catch (IOException ex) {
-                    ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                    logger.error("Could not download file.", ex);
                     AlertUtil.show(Alert.AlertType.ERROR, "File Download Error", ex.getMessage());
                     return;
                 }
@@ -290,7 +308,7 @@ public class Controller {
         filterFieldsCheckbox.setDisable(true);
         filterMethodsCheckbox.setDisable(true);
 
-        ThreadUtil.submit(() -> {
+        workPool.submit(() -> {
             VersionGUIUtil.getVersions(this);
 
             Platform.runLater(() -> {
@@ -375,7 +393,7 @@ public class Controller {
 
         if (srgVersion == 1 && !srgJoinedFile.exists()) {
             versionLabel.setText("Extracting SRG data");
-            ThreadUtil.submit(() -> {
+            workPool.submit(() -> {
                 try {
                     if (!srgJoinedFile.exists()) {
                         ZipUtil.extractFile(srgFile, "joined.srg", srgJoinedFile);
@@ -393,7 +411,7 @@ public class Controller {
                     try {
                         JSONUtil.write(srgData.serialize(), srgDataFile);
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not write file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Writing Data", ex.getMessage());
                         return;
                     }
@@ -401,11 +419,11 @@ public class Controller {
                     try {
                         srgData = new SRGData(JSONUtil.readObject(srgDataFile));
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not write file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     } catch (org.json.simple.parser.ParseException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     }
@@ -414,13 +432,13 @@ public class Controller {
             });
         } else {
             versionLabel.setText("Loading SRG data");
-            ThreadUtil.submit(() -> {
+            workPool.submit(() -> {
                 if (!srgDataFile.exists()) {
                     srgData = new SRGData(srgJoinedFile, srgVersion);
                     try {
                         JSONUtil.write(srgData.serialize(), srgDataFile);
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not write file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Writing Data", ex.getMessage());
                         return;
                     }
@@ -428,11 +446,11 @@ public class Controller {
                     try {
                         srgData = new SRGData(JSONUtil.readObject(srgDataFile));
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     } catch (org.json.simple.parser.ParseException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     }
@@ -451,7 +469,7 @@ public class Controller {
 
         if (!fieldsFile.exists() || !methodsFile.exists() || !paramsFile.exists()) {
             versionLabel.setText("Extracting CSV data");
-            ThreadUtil.submit(() -> {
+            workPool.submit(() -> {
                 try {
                     if (!fieldsFile.exists()) {
                         ZipUtil.extractFile(csvFile, "fields.csv", fieldsFile);
@@ -475,7 +493,7 @@ public class Controller {
                     try {
                         JSONUtil.write(csvData.serialize(), csvDataFile);
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not write file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Writing Data", ex.getMessage());
                         return;
                     }
@@ -483,11 +501,11 @@ public class Controller {
                     try {
                         csvData = new CSVData(JSONUtil.readObject(csvDataFile));
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     } catch (org.json.simple.parser.ParseException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     }
@@ -496,13 +514,13 @@ public class Controller {
             });
         } else {
             versionLabel.setText("Loading CSV data");
-            ThreadUtil.submit(() -> {
+            workPool.submit(() -> {
                 if (!csvDataFile.exists()) {
                     csvData = new CSVData(fieldsFile,  methodsFile, paramsFile);
                     try {
                         JSONUtil.write(csvData.serialize(), csvDataFile);
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not write file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Writing Data", ex.getMessage());
                         return;
                     }
@@ -510,11 +528,11 @@ public class Controller {
                     try {
                         csvData = new CSVData(JSONUtil.readObject(csvDataFile));
                     } catch (IOException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     } catch (org.json.simple.parser.ParseException ex) {
-                        ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                        logger.error("Could not read file.", ex);
                         AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                         return;
                     }
@@ -525,7 +543,7 @@ public class Controller {
     }
 
     private void loadData(File csvFile) {
-        ThreadUtil.submit(() -> {
+        workPool.submit(() -> {
             rootTrees.clear();
 
             File treeDataFile = new File(csvFile.getParent(), "tree.json");
@@ -625,7 +643,7 @@ public class Controller {
                try {
                     JSONUtil.write(out, treeDataFile);
                 } catch (IOException ex) {
-                    ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                   logger.error("Could not write file.", ex);
                     AlertUtil.show(Alert.AlertType.ERROR, "Error Writing Data", ex.getMessage());
                     return;
                 }
@@ -637,11 +655,11 @@ public class Controller {
                 try {
                     treeData = JSONUtil.readArray(treeDataFile);
                 } catch (IOException ex) {
-                    ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                    logger.error("Could not read file.", ex);
                     AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                     return;
                 } catch (org.json.simple.parser.ParseException ex) {
-                    ServiceLocator.getService(IExceptionHandler.class).sendException(ex);
+                    logger.error("Could not read file.", ex);
                     AlertUtil.show(Alert.AlertType.ERROR, "Error Reading Data", ex.getMessage());
                     return;
                 }
