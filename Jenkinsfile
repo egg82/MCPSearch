@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'maven:3-alpine'
+            image 'theboegl/jenkins-javafx-xvfb:latest'
             args '-v /root/.m2:/root/.m2'
         }
     }
