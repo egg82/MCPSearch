@@ -1,5 +1,6 @@
 package ninja.egg82.mcpsearch.utils.gui;
 
+import java.net.URL;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import ninja.egg82.json.JSONWebUtil;
@@ -24,7 +25,7 @@ public class VersionGUIUtil {
     public static void getVersions(Controller controller) {
         JSONObject versions;
         try {
-            versions = JSONWebUtil.getJsonObject("http://export.mcpbot.bspk.rs/versions.json", "egg82/MCPSearch");
+            versions = JSONWebUtil.getJSONObject(new URL("http://export.mcpbot.bspk.rs/versions.json"), "GET", 5000, "egg82/MCPSearch");
         } catch (ParseException ex) {
             logger.error("Could not parse JSON.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "JSON Parse Error", ex.getMessage());
