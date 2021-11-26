@@ -1,19 +1,23 @@
 package ninja.egg82.mcpsearch.utils.gui;
 
+import java.net.HttpURLConnection;
 import java.net.URL;
+
+import flexjson.JSONDeserializer;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
-import ninja.egg82.json.JSONWebUtil;
 import ninja.egg82.mcpsearch.Controller;
-import ninja.egg82.mcpsearch.utils.AlertUtil;
-import ninja.egg82.mcpsearch.utils.HTTPUtil;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
+import ninja.egg82.mcpsearch.model.MCPVersionModel;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import ninja.egg82.mcpsearch.utils.AlertUtil;
+import ninja.egg82.mcpsearch.utils.TimeUtil;
+import ninja.egg82.mcpsearch.web.WebRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,24 +27,28 @@ public class VersionGUIUtil {
     private VersionGUIUtil() {}
 
     public static void getVersions(Controller controller) {
-        JSONObject versions;
+        Map<String, MCPVersionModel> model;
         try {
-            versions = JSONWebUtil.getJSONObject(new URL("http://export.mcpbot.bspk.rs/versions.json"), "GET", 5000, "egg82/MCPSearch");
-        } catch (ParseException ex) {
-            logger.error("Could not parse JSON.", ex);
-            AlertUtil.show(Alert.AlertType.ERROR, "JSON Parse Error", ex.getMessage());
-            return;
+            HttpURLConnection conn = WebRequest.builder(new URL("https://raw.githubusercontent.com/ModCoderPack/MCPMappingsArchive/master/versions.json"))
+                    .timeout(new TimeUtil.Time(2500L, TimeUnit.MILLISECONDS))
+                    .userAgent("egg82/MCPSearch")
+                    .header("Accept", "application/json")
+                    .build()
+                    .getConnection();
+
+            JSONDeserializer<Map<String, MCPVersionModel>> modelDeserializer = new JSONDeserializer<>();
+            modelDeserializer.use("values", MCPVersionModel.class);
+            model = modelDeserializer.deserialize(WebRequest.getString(conn));
         } catch (IOException ex) {
             logger.error("Could not get version.", ex);
             AlertUtil.show(Alert.AlertType.ERROR, "Version Fetch Error", ex.getMessage());
             return;
         }
 
-        controller.versions = versions;
+        controller.versionsModel = model;
 
         List<String> versionList = new ArrayList<>();
-        for (Object i : versions.entrySet()) {
-            Map.Entry<String, JSONObject> kvp = (Map.Entry<String, JSONObject>) i;
+        for (Map.Entry<String, MCPVersionModel> kvp : model.entrySet()) {
             versionList.add(kvp.getKey());
         }
         versionList.sort((v1, v2) -> {

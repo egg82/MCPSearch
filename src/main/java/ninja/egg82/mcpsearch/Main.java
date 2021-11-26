@@ -19,12 +19,14 @@ public class Main extends Application {
         launch(args);
     }
 
-    private static ExecutorService initialLoader = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("Init-%d").build());
+    private static final ExecutorService initialLoader = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("Init-%d").build());
 
     private Controller controller;
 
     @Override
     public void start(Stage primaryStage) throws IOException {
+        org.burningwave.core.assembler.StaticComponentContainer.JVMInfo.getVersion();
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/main.fxml"));
         Parent root = loader.load();
 

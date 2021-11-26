@@ -2,7 +2,6 @@ package ninja.egg82.mcpsearch;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jfoenix.controls.*;
-import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,9 +17,10 @@ import ninja.egg82.mcpsearch.data.SRGData;
 import ninja.egg82.mcpsearch.data.TreeClass;
 import ninja.egg82.mcpsearch.data.TreeField;
 import ninja.egg82.mcpsearch.data.TreeMethod;
+import ninja.egg82.mcpsearch.model.MCPVersionModel;
+import ninja.egg82.mcpsearch.ovrd.FitWidthTableView;
 import ninja.egg82.mcpsearch.utils.*;
 import ninja.egg82.mcpsearch.utils.gui.SearchGUIUtil;
-import ninja.egg82.mcpsearch.utils.gui.TreeTableGUIUtil;
 import ninja.egg82.mcpsearch.utils.gui.VersionGUIUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -135,7 +135,7 @@ public class Controller {
     @FXML
     public Label versionLabel;
 
-    public Map<String, JSONObject> versions = null;
+    public Map<String, MCPVersionModel> versionsModel = null;
 
     private DateFormat fromDateFormat = new SimpleDateFormat("yyyyMMdd");
     private DateFormat toDateFormat = new SimpleDateFormat("EEE MMM dd yyyy");
@@ -154,19 +154,17 @@ public class Controller {
         filterFieldsCheckbox.setDisable(true);
         filterMethodsCheckbox.setDisable(true);
 
-        JSONObject revisions = versions.get(versionCombo.getValue());
+        MCPVersionModel revisions = versionsModel.get(versionCombo.getValue());
         if (revisions == null) {
             return;
         }
 
-        for (Object i : ((JSONArray) revisions.get("stable"))) {
-            String revision = i.toString();
-            versionTypeCombo.getItems().add("Stable: rev-" + revision);
+        for (Short i : revisions.getStable()) {
+            versionTypeCombo.getItems().add("Stable: rev-" + i);
         }
-        for (Object i : ((JSONArray) revisions.get("snapshot"))) {
-            String revision = i.toString();
+        for (Long i : revisions.getSnapshot()) {
             try {
-                versionTypeCombo.getItems().add("Snapshot: " + toDateFormat.format(fromDateFormat.parse(revision)));
+                versionTypeCombo.getItems().add("Snapshot: " + toDateFormat.format(fromDateFormat.parse(String.valueOf(i))));
             } catch (ParseException ex) {
                 logger.error("Could not parse date.", ex);
                 AlertUtil.show(Alert.AlertType.ERROR, "Date Parser Error", ex.getMessage());
@@ -213,18 +211,18 @@ public class Controller {
         String srgUrl;
 
         if (isStable) {
-            csvUrl = "http://export.mcpbot.bspk.rs/mcp_stable/" + revision + "-" + version + "/mcp_stable-" + revision + "-" + version + ".zip";
+            csvUrl = "https://github.com/ModCoderPack/MCPMappingsArchive/raw/master/mcp_stable/" + revision + "-" + version + "/mcp_stable-" + revision + "-" + version + ".zip";
         } else {
-            csvUrl = "http://export.mcpbot.bspk.rs/mcp_snapshot/" + revision + "-" + version + "/mcp_snapshot-" + revision + "-" + version + ".zip";
+            csvUrl = "https://github.com/ModCoderPack/MCPMappingsArchive/raw/master/mcp_snapshot/" + revision + "-" + version + "/mcp_snapshot-" + revision + "-" + version + ".zip";
         }
 
         int srgVersion;
         int[] versionParsed = VersionGUIUtil.parseVersion(version);
         if (versionParsed[0] == 1 && versionParsed[1] <= 12) {
-            srgUrl = "http://export.mcpbot.bspk.rs/mcp/" + version + "/mcp-" + version + "-srg.zip";
+            srgUrl = "https://github.com/ModCoderPack/MCPMappingsArchive/raw/master/mcp/" + version + "/mcp-" + version + "-srg.zip";
             srgVersion = 1;
         } else {
-            srgUrl = "https://raw.githubusercontent.com/MinecraftForge/MCPConfig/master/versions/" + version + "/joined.tsrg";
+            srgUrl = "https://raw.githubusercontent.com/MinecraftForge/MCPConfig/master/versions/release/" + version + "/joined.tsrg";
             srgVersion = 2;
         }
 
@@ -267,11 +265,11 @@ public class Controller {
                 try {
                     if (!csvZip.exists()) {
                         Platform.runLater(() -> versionLabel.setText("Downloading CSV data"));
-                        HTTPUtil.downloadFile(new URL(csvUrl), csvZip);
+                        FileUtil.downloadFile(csvUrl, csvZip);
                     }
                     if (!srgFile.exists()) {
                         Platform.runLater(() -> versionLabel.setText("Downloading SRG data"));
-                        HTTPUtil.downloadFile(new URL(srgUrl), srgFile);
+                        FileUtil.downloadFile(srgUrl, srgFile);
                     }
                 } catch (IOException ex) {
                     logger.error("Could not download file.", ex);
@@ -370,11 +368,11 @@ public class Controller {
 
     // Data
     @FXML
-    public JFXTreeTableView classesTable;
+    public FitWidthTableView classesTable;
     @FXML
-    public JFXTreeTableView methodsTable;
+    public FitWidthTableView methodsTable;
     @FXML
-    public JFXTreeTableView fieldsTable;
+    public FitWidthTableView fieldsTable;
 
     private CSVData csvData;
     private SRGData srgData;
@@ -396,7 +394,7 @@ public class Controller {
             workPool.submit(() -> {
                 try {
                     if (!srgJoinedFile.exists()) {
-                        ZipUtil.extractFile(srgFile, "joined.srg", srgJoinedFile);
+                        FileUtil.extractFile(srgFile, "joined.srg", srgJoinedFile);
                     }
                 } catch (IOException ex) {
                     AlertUtil.show(Alert.AlertType.ERROR, "File Extraction Error", ex.getMessage());
@@ -472,13 +470,13 @@ public class Controller {
             workPool.submit(() -> {
                 try {
                     if (!fieldsFile.exists()) {
-                        ZipUtil.extractFile(csvFile, "fields.csv", fieldsFile);
+                        FileUtil.extractFile(csvFile, "fields.csv", fieldsFile);
                     }
                     if (!methodsFile.exists()) {
-                        ZipUtil.extractFile(csvFile, "methods.csv", methodsFile);
+                        FileUtil.extractFile(csvFile, "methods.csv", methodsFile);
                     }
                     if (!paramsFile.exists()) {
-                        ZipUtil.extractFile(csvFile, "params.csv", paramsFile);
+                        FileUtil.extractFile(csvFile, "params.csv", paramsFile);
                     }
                 } catch (IOException ex) {
                     AlertUtil.show(Alert.AlertType.ERROR, "File Extraction Error", ex.getMessage());
@@ -692,9 +690,6 @@ public class Controller {
         } else {
             classesTable.getSelectionModel().select(selectionIndex);
         }
-        if (fitColumns) {
-            TreeTableGUIUtil.autoFitTable(classesTable);
-        }
 
         versionCombo.setDisable(false);
         versionTypeCombo.setDisable(false);
@@ -733,7 +728,6 @@ public class Controller {
         }
         fieldRoot.setExpanded(true);
         fieldsTable.setRoot(fieldRoot);
-        TreeTableGUIUtil.autoFitTable(fieldsTable);
     }
 
     private void populateMethods(List<TreeMethod> methods) {
@@ -759,7 +753,6 @@ public class Controller {
         }
         methodRoot.setExpanded(true);
         methodsTable.setRoot(methodRoot);
-        TreeTableGUIUtil.autoFitTable(methodsTable);
     }
 
     private TreeItem<TreeClass> getNode(TreeClass clazz) {
